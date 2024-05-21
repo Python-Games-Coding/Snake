@@ -1,107 +1,108 @@
-import random
-import turtle as t
-import time
+import pygame,sys,time,random
+from pygame.locals import *
+# 定义颜色变量
+redColour = pygame.Color(255,0,0)
+blackColour = pygame.Color(0,0,0)
+whiteColour = pygame.Color(255,255,255)
+greyColour = pygame.Color(150,150,150)
+def gameOver(playSurface,score):
+    gameOverFont = pygame.font.SysFont('arial.ttf',54)
+    gameOverSurf = gameOverFont.render('Game Over!', True, greyColour)
+    gameOverRect = gameOverSurf.get_rect()
+    gameOverRect.midtop = (300, 10)
+    playSurface.blit(gameOverSurf, gameOverRect)
+    scoreFont = pygame.font.SysFont('arial.ttf',54)
+    scoreSurf = scoreFont.render('Score:'+str(score), True, greyColour)
+    scoreRect = scoreSurf.get_rect()
+    scoreRect.midtop = (300, 50)
+    playSurface.blit(scoreSurf, scoreRect)
+    pygame.display.flip()
+    time.sleep(5)
+    pygame.quit()
+    sys.exit()
 
-t.bgcolor('yellow')
-caterpiller = t.Turtle()
-caterpiller.shape('square')
-caterpiller.color('red')
-caterpiller.speed(0)
-caterpiller.penup()
-caterpiller.ht()
+def main():
+    # 初始化pygame
+    pygame.init()
+    fpsClock = pygame.time.Clock()
+    # 创建pygame显示层
+    playSurface = pygame.display.set_mode((600,460))
+    pygame.display.set_caption('Snake Game')
+    # 初始化变量
+    snakePosition = [100,100] #贪吃蛇 蛇头的位置
+    snakeSegments = [[100,100]] #贪吃蛇 蛇的身体，初始为一个单位
+    raspberryPosition = [300,300] #树莓的初始位置
+    raspberrySpawned = 1 #树莓的个数为1
+    direction = 'right' #初始方向为右
+    changeDirection = direction
+    score = 0 #初始得分
+    while True:
+        # 检测例如按键等pygame事件
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == KEYDOWN:
+                # 判断键盘事件
+                if event.key == K_RIGHT or event.key == ord('d'):
+                    changeDirection = 'right'
+                if event.key == K_LEFT or event.key == ord('a'):
+                    changeDirection = 'left'
+                if event.key == K_UP or event.key == ord('w'):
+                    changeDirection = 'up'
+                if event.key == K_DOWN or event.key == ord('s'):
+                    changeDirection = 'down'
+                if event.key == K_ESCAPE:
+                    pygame.event.post(pygame.event.Event(QUIT))
+        # 判断是否输入了反方向
+        if changeDirection == 'right' and not direction == 'left':
+            direction = changeDirection
+        if changeDirection == 'left' and not direction == 'right':
+            direction = changeDirection
+        if changeDirection == 'up' and not direction == 'down':
+            direction = changeDirection
+        if changeDirection == 'down' and not direction == 'up':
+            direction = changeDirection
+        # 根据方向移动蛇头的坐标
+        if direction == 'right':
+            snakePosition[0] += 20
+        if direction == 'left':
+            snakePosition[0] -= 20
+        if direction == 'up':
+            snakePosition[1] -= 20
+        if direction == 'down':
+            snakePosition[1] += 20
+        # 增加蛇的长度
+        snakeSegments.insert(0,list(snakePosition))
+        # 判断是否吃掉了树莓
+        if snakePosition[0] == raspberryPosition[0] and snakePosition[1] == raspberryPosition[1]:
+            raspberrySpawned = 0
+        else:
+            snakeSegments.pop()
+        # 如果吃掉树莓，则重新生成树莓
+        if raspberrySpawned == 0:
+            x = random.randrange(1,30)
+            y = random.randrange(1,23)
+            raspberryPosition = [int(x*20),int(y*20)]
+            raspberrySpawned = 1
+            score += 1
+        # 绘制pygame显示层
+        playSurface.fill(blackColour)
+        for position in snakeSegments:
+            pygame.draw.rect(playSurface,whiteColour,Rect(position[0],position[1],20,20))
+            pygame.draw.rect(playSurface,redColour,Rect(raspberryPosition[0], raspberryPosition[1],20,20))
+        # 刷新pygame显示层
+        pygame.display.flip()
+        # 判断是否死亡
+        if snakePosition[0] > 600 or snakePosition[0] < 0:
+            gameOver(playSurface,score)
+        if snakePosition[1] > 460 or snakePosition[1] < 0:
+            gameOver(playSurface,score)
+        for snakeBody in snakeSegments[1:]:
+            if snakePosition[0] == snakeBody[0] and snakePosition[1] == snakeBody[1]:
+                gameOver(playSurface,score)
+        # 控制游戏速度
+        fpsClock.tick(5)
 
-leaf = t.Turtle()
-leaf_shape = ((0, 0), (14, 2), (18, 6), (20, 20), (6, 18), (2, 14))
-t.register_shape('leaf', leaf_shape)
-leaf.shape('leaf')
-leaf.color('green')
-leaf.penup()
-leaf.ht()
-leaf.speed(0)
-
-game_started = False
-tt = t.Turtle()
-tt.write('按下空格开始游戏', align='center', font=('Arial', 16, 'bold'))
-tt.ht()
-
-st = t.Turtle()
-st.ht()
-st.speed(0)
-
-def outside_window():
-    l_wall = -t.window_width / 2
-    r_wall = t.window_width / 2
-    t_wall = t.window_height / 2
-    b_wall = -t.window_height / 2
-    (x, y) = caterpiller.pos()
-    outside = x < l_wall or x > r_wall or y < b_wall or y > t_wall
-    return outside
-
-def game_over():
-    caterpiller.color('yellow')
-    leaf.color('yellow')
-    t.penup()
-    t.ht()
-    t.write('GAMEOVER!', align='center', font=('Arial', 30, 'normal'))
-
-def display_score(current_score):
-    st.clear()
-    st.penup()
-    x = (t.window_width() / 2) - 50
-    y = (t.window_height() / 2) - 50
-    st.setpos(x, y)
-    st.write('Score: ' + str(current_score), align='right', font=('Arial', 20, 'bold'))
-
-def place_leaf():
-    leaf.ht()
-    leaf.setx(random.randint(-200, 200))
-    leaf.sety(random.randint(-200, 200))
-    leaf.st()
-
-def start_game():
-    global game_started
-    if game_started:
-        return
-    game_started = True
-    score = 0
-    tt.clear()
-    caterpiller_speed = 1
-    caterpiller_length = 3
-    caterpiller.shapesize(1, caterpiller_length, 1)
-    caterpiller.st()
-    display_score(score)
-    place_leaf()
-    while 1:
-        caterpiller.forward(caterpiller_speed)
-        if caterpiller.distance(leaf) < 50:
-            place_leaf()
-            caterpiller_length = caterpiller_length + 2
-            caterpiller.shapesize(1, caterpiller_length, 1)
-            score = score + 10
-            display_score(score)
-        if outside_window:
-            pass
-
-def move_up():
-    if caterpiller.heading() == 0 or caterpiller.heading() == 180:
-        caterpiller.setheading(90)
-
-def move_down():
-    if caterpiller.heading() == 0 or caterpiller.heading() == 180:
-        caterpiller.setheading(270)
-
-def move_left():
-    if caterpiller.heading() == 90 or caterpiller.heading() == 270:
-        caterpiller.setheading(180)
-
-def move_right():
-    if caterpiller.heading() == 90 or caterpiller.heading() == 270:
-        caterpiller.setheading(0)
-
-t.onkey(start_game, 'space')
-t.onkey(move_up, 'Up')
-t.onkey(move_right, 'Right')
-t.onkey(move_down, 'Down') 
-t.onkey(move_left, 'Left')
-t.listen()
-t.mainloop()
+if __name__ == "__main__":
+    main()
