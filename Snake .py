@@ -1,10 +1,6 @@
 import random
 import turtle as t
-from pygame import mixer
-
-mixer.init()
-a = mixer.Sound("a.mp3")
-a.play()
+import time
 
 t.bgcolor('yellow')
 caterpiller = t.Turtle()
