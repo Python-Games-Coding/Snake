@@ -1,108 +1,99 @@
-import pygame,sys,time,random
-from pygame.locals import *
-# 定义颜色变量
-redColour = pygame.Color(255,0,0)
-blackColour = pygame.Color(0,0,0)
-whiteColour = pygame.Color(255,255,255)
-greyColour = pygame.Color(150,150,150)
-def gameOver(playSurface,score):
-    gameOverFont = pygame.font.SysFont('arial.ttf',54)
-    gameOverSurf = gameOverFont.render('Game Over!', True, greyColour)
-    gameOverRect = gameOverSurf.get_rect()
-    gameOverRect.midtop = (300, 10)
-    playSurface.blit(gameOverSurf, gameOverRect)
-    scoreFont = pygame.font.SysFont('arial.ttf',54)
-    scoreSurf = scoreFont.render('Score:'+str(score), True, greyColour)
-    scoreRect = scoreSurf.get_rect()
-    scoreRect.midtop = (300, 50)
-    playSurface.blit(scoreSurf, scoreRect)
-    pygame.display.flip()
-    time.sleep(5)
-    pygame.quit()
-    sys.exit()
+import pygame
+import sys
+import random
+
+pygame.init()
+
+# 游戏区域设置
+SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
+GRID_SIZE = 20
+GRID_WIDTH, GRID_HEIGHT = SCREEN_WIDTH // GRID_SIZE, SCREEN_HEIGHT // GRID_SIZE
+GRID_COLOR = (50, 50, 50)
+
+# 蛇和食物颜色
+SNAKE_COLOR = (0, 255, 0)
+FOOD_COLOR = (255, 0, 0)
+
+# 定义蛇的方向
+UP = (0, -1)
+DOWN = (0, 1)
+LEFT = (-1, 0)
+RIGHT = (1, 0)
+
+# 游戏速度
+FPS = 4
+
+# 初始化窗口
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("贪吃蛇")
+
+def draw_grid():
+    for x in range(0, SCREEN_WIDTH, GRID_SIZE):
+        pygame.draw.line(screen, GRID_COLOR, (x, 0), (x, SCREEN_HEIGHT))
+    for y in range(0, SCREEN_HEIGHT, GRID_SIZE):
+        pygame.draw.line(screen, GRID_COLOR, (0, y), (SCREEN_WIDTH, y))
+
+def draw_snake(snake):
+    for segment in snake:
+        pygame.draw.rect(screen, SNAKE_COLOR, (segment[0] * GRID_SIZE, segment[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+
+def draw_food(food):
+    pygame.draw.rect(screen, FOOD_COLOR, (food[0] * GRID_SIZE, food[1] * GRID_SIZE, GRID_SIZE, GRID_SIZE))
+
+def get_random_location():
+    return (random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1))
 
 def main():
-    # 初始化pygame
-    pygame.init()
-    fpsClock = pygame.time.Clock()
-    # 创建pygame显示层
-    playSurface = pygame.display.set_mode((600,460))
-    pygame.display.set_caption('Snake Game')
-    # 初始化变量
-    snakePosition = [100,100] #贪吃蛇 蛇头的位置
-    snakeSegments = [[100,100]] #贪吃蛇 蛇的身体，初始为一个单位
-    raspberryPosition = [300,300] #树莓的初始位置
-    raspberrySpawned = 1 #树莓的个数为1
-    direction = 'right' #初始方向为右
-    changeDirection = direction
-    score = 0 #初始得分
+    clock = pygame.time.Clock()
+
+    # 初始化蛇的位置和初始长度
+    snake = [(GRID_WIDTH // 2, GRID_HEIGHT // 4)]
+    snake_direction = RIGHT
+
+    # 初始化食物位置
+    food = get_random_location()
+
     while True:
-        # 检测例如按键等pygame事件
         for event in pygame.event.get():
-            if event.type == QUIT:
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == KEYDOWN:
-                # 判断键盘事件
-                if event.key == K_RIGHT or event.key == ord('d'):
-                    changeDirection = 'right'
-                if event.key == K_LEFT or event.key == ord('a'):
-                    changeDirection = 'left'
-                if event.key == K_UP or event.key == ord('w'):
-                    changeDirection = 'up'
-                if event.key == K_DOWN or event.key == ord('s'):
-                    changeDirection = 'down'
-                if event.key == K_ESCAPE:
-                    pygame.event.post(pygame.event.Event(QUIT))
-        # 判断是否输入了反方向
-        if changeDirection == 'right' and not direction == 'left':
-            direction = changeDirection
-        if changeDirection == 'left' and not direction == 'right':
-            direction = changeDirection
-        if changeDirection == 'up' and not direction == 'down':
-            direction = changeDirection
-        if changeDirection == 'down' and not direction == 'up':
-            direction = changeDirection
-        # 根据方向移动蛇头的坐标
-        if direction == 'right':
-            snakePosition[0] += 20
-        if direction == 'left':
-            snakePosition[0] -= 20
-        if direction == 'up':
-            snakePosition[1] -= 20
-        if direction == 'down':
-            snakePosition[1] += 20
-        # 增加蛇的长度
-        snakeSegments.insert(0,list(snakePosition))
-        # 判断是否吃掉了树莓
-        if snakePosition[0] == raspberryPosition[0] and snakePosition[1] == raspberryPosition[1]:
-            raspberrySpawned = 0
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP and snake_direction != DOWN:
+                    snake_direction = UP
+                elif event.key == pygame.K_DOWN and snake_direction != UP:
+                    snake_direction = DOWN
+                elif event.key == pygame.K_LEFT and snake_direction != RIGHT:
+                    snake_direction = LEFT
+                elif event.key == pygame.K_RIGHT and snake_direction != LEFT:
+                    snake_direction = RIGHT
+
+        # 蛇头移动
+        head_x, head_y = snake[0]
+        new_head = (head_x + snake_direction[0], head_y + snake_direction[1])
+
+        # 判断游戏结束的条件
+        if new_head[0] < 0 or new_head[0] >= GRID_WIDTH or new_head[1] < 0 or new_head[1] >= GRID_HEIGHT or new_head in snake:
+            pygame.quit()
+            sys.exit()
+
+        snake.insert(0, new_head)
+
+        # 判断是否吃到食物
+        if new_head == food:
+            food = get_random_location()
         else:
-            snakeSegments.pop()
-        # 如果吃掉树莓，则重新生成树莓
-        if raspberrySpawned == 0:
-            x = random.randrange(1,30)
-            y = random.randrange(1,23)
-            raspberryPosition = [int(x*20),int(y*20)]
-            raspberrySpawned = 1
-            score += 1
-        # 绘制pygame显示层
-        playSurface.fill(blackColour)
-        for position in snakeSegments:
-            pygame.draw.rect(playSurface,whiteColour,Rect(position[0],position[1],20,20))
-            pygame.draw.rect(playSurface,redColour,Rect(raspberryPosition[0], raspberryPosition[1],20,20))
-        # 刷新pygame显示层
+            snake.pop()
+
+        # 绘制游戏界面
+        screen.fill((0, 0, 0))
+        draw_grid()
+        draw_snake(snake)
+        draw_food(food)
+
         pygame.display.flip()
-        # 判断是否死亡
-        if snakePosition[0] > 600 or snakePosition[0] < 0:
-            gameOver(playSurface,score)
-        if snakePosition[1] > 460 or snakePosition[1] < 0:
-            gameOver(playSurface,score)
-        for snakeBody in snakeSegments[1:]:
-            if snakePosition[0] == snakeBody[0] and snakePosition[1] == snakeBody[1]:
-                gameOver(playSurface,score)
-        # 控制游戏速度
-        fpsClock.tick(5)
+        clock.tick(FPS)
 
 if __name__ == "__main__":
     main()
